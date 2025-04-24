@@ -8,9 +8,8 @@
   <script src="common-auth.js"></script>
   <script>
     const USERS_BASE = 'https://crudcrud.com/api/a538676501454cb29ba58ee50d21748c/utilizatori';
-    const CRUD_BASE  = 'https://crudcrud.com/api/a538676501454cb29ba58ee50d21748c/cereri';
+    const LOGS_BASE  = 'https://crudcrud.com/api/a538676501454cb29ba58ee50d21748c/logsCereri';
   </script>
-  
   <style>
     .logs-container {
       max-width: 1000px;
@@ -62,8 +61,8 @@
 <body>
   <script>
     const cu = getUser();
-    if (!cu || cu.role!=='admin') location.replace('index.html');
-    capyChan.onmessage = e => { if (e.data.type==='update-cereri') location.reload(); };
+    if (!cu || cu.role !== 'admin') location.replace('index.html');
+    capyChan.onmessage = e => { if (e.data.type === 'update-cereri') location.reload(); };
   </script>
 
   <header class="navbar">
@@ -79,15 +78,15 @@
   </header>
 
   <main class="logs-container">
-    <!-- Utilizatori -->
+    <!-- Utilizatori Înregistrați -->
     <section class="section-bg">
       <h2 class="section-title">Utilizatori Înregistrați</h2>
       <div id="users-log" class="table-container"></div>
     </section>
 
-    <!-- Cereri -->
+    <!-- Jurnal Cereri Backup -->
     <section class="section-bg">
-      <h2 class="section-title">Toate Cererile de Împrumut</h2>
+      <h2 class="section-title">Jurnal Cereri (Backup)</h2>
       <div id="requests-log" class="table-container"></div>
     </section>
   </main>
@@ -101,9 +100,9 @@
     (async function(){
       const uDiv = document.getElementById('users-log');
       try {
-        let res = await fetch(USERS_BASE);
+        const res = await fetch(USERS_BASE);
         if (!res.ok) throw new Error(res.status);
-        let users = await res.json();
+        const users = await res.json();
         if (users.length === 0) {
           uDiv.innerHTML = '<p style="text-align:center;color:#666;">Niciun utilizator.</p>';
         } else {
@@ -132,32 +131,33 @@
       }
     })();
 
-    // 2) Fetch și afișare cereri
+    // 2) Fetch și afișare jurnale cereri din backup
     (async function(){
       const rDiv = document.getElementById('requests-log');
       try {
-        let res = await fetch(CERERI_BASE);
+        const res = await fetch(LOGS_BASE);
         if (!res.ok) throw new Error(res.status);
-        let cereri = await res.json();
-        if (cereri.length === 0) {
-          rDiv.innerHTML = '<p style="text-align:center;color:#666;">Nicio cerere.</p>';
+        const logs = await res.json();
+        // Sortează cronologic: de la cele mai vechi la cele mai noi
+        logs.sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt));
+        if (logs.length === 0) {
+          rDiv.innerHTML = '<p style="text-align:center;color:#666;">Nicio intrare în jurnal.</p>';
         } else {
           const tbl = document.createElement('table');
           tbl.innerHTML = `
             <thead>
               <tr>
-                <th>#</th><th>ID</th><th>Data</th><th>Status</th><th>Decizie</th>
-                <th>Nume</th><th>Email</th><th>Sumă</th><th>Perioadă</th><th>Motiv</th>
+                <th>#</th><th>ID Cerere</th><th>Data</th><th>Status</th><th>Nume</th>
+                <th>Email</th><th>Sumă</th><th>Perioadă</th><th>Motiv</th>
               </tr>
             </thead>
             <tbody>
-              ${cereri.map((c,i)=>`
+              ${logs.map((c,i)=>`
                 <tr>
                   <td>${i+1}</td>
-                  <td>${c._id}</td>
+                  <td>${c.id}</td>
                   <td>${c.createdAt}</td>
                   <td>${c.status}</td>
-                  <td>${c.decisionDate||'–'}</td>
                   <td>${c.nume}</td>
                   <td>${c.email}</td>
                   <td>${c.suma}</td>
