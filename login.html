@@ -1,181 +1,109 @@
 <!DOCTYPE html>
 <html lang="ro">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>CapyBank – Logs</title>
-  <link rel="stylesheet" href="style.css"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>CapyBank – Login</title>
+
+  <!-- Stiluri globale -->
+  <link rel="stylesheet" href="style.css">
+  <!-- Helper per‑tab + BroadcastChannel -->
   <script src="common-auth.js"></script>
 
-  <!-- Definim endpoint-urile înainte de orice alt script -->
-  <script>
-    const USERS_BASE  = 'https://crudcrud.com/api/a538676501454cb29ba58ee50d21748c/utilizatori';
-    const CERERI_BASE = 'https://crudcrud.com/api/a538676501454cb29ba58ee50d21748c/cereri';
-  </script>
-
+  <!-- Stil intern pentru buton -->
   <style>
-    .logs-container {
-      max-width: 1000px;
-      margin: 2rem auto;
-      padding: 0 1rem;
+    .form-card { position: relative; }
+    .form-card .submit-btn{
+      width:100%;max-width:200px;margin:1.5rem auto 0;display:block;
+      background:linear-gradient(45deg,#6a11cb,#2575fc);color:#fff;border:none;
+      padding:0.8rem 0;border-radius:30px;font-weight:600;
+      transition:transform .2s,box-shadow .2s;
     }
-    .section-bg {
-      background: #fff;
-      border-radius: 16px;
-      padding: 2rem;
-      margin-bottom: 2rem;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    .form-card .submit-btn:hover{
+      transform:translateY(-2px);box-shadow:0 6px 18px rgba(38,50,56,.2);
     }
-    .section-title {
-      text-align: center;
-      font-size: 2rem;
-      color: #5b35ff;
-      margin-bottom: 1rem;
-    }
-    .table-container {
-      overflow-x: auto;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 1rem;
-    }
-    thead {
-      background: #5b35ff;
-      color: #fff;
-    }
-    th, td {
-      padding: 0.75rem;
-      border: 1px solid #ddd;
-      text-align: center;
-      font-size: 0.95rem;
-    }
-    tbody tr:nth-child(even) {
-      background: #f9f9f9;
-    }
-    @media (max-width: 768px) {
-      th, td {
-        padding: 0.5rem;
-        font-size: 0.85rem;
-      }
-    }
+    .form-card p a{color:#2575fc;font-weight:500;text-decoration:none;transition:color .3s;}
+    .form-card p a:hover{color:#6a11cb;}
   </style>
 </head>
 <body>
-  <script>
-    const cu = getUser();
-    if (!cu || cu.role !== 'admin') location.replace('index.html');
-    capyChan.onmessage = e => {
-      if (e.data.type === 'update-cereri') location.reload();
-    };
-  </script>
-
+  <!-- Navbar -->
   <header class="navbar">
-    <a href="index.html" class="logo">CapyBank Logs</a>
-    <ul class="nav-links">
-      <li><a href="admin.html">Admin</a></li>
-      <li><a href="logs.html" class="active">Logs</a></li>
-    </ul>
+    <a href="index.html" class="logo">CapyBank</a>
+    <ul class="nav-links"></ul>
     <div class="burger"
-         onclick="this.classList.toggle('toggle'); document.querySelector('.nav-links').classList.toggle('nav-active');">
+         onclick="this.classList.toggle('toggle');document.querySelector('.nav-links').classList.toggle('nav-active');">
       <span></span><span></span><span></span>
     </div>
   </header>
 
-  <main class="logs-container">
-    <!-- Utilizatori -->
-    <section class="section-bg">
-      <h2 class="section-title">Utilizatori Înregistrați</h2>
-      <div id="users-log" class="table-container"></div>
-    </section>
+  <!-- Navbar dinamic -->
+  <script>
+    const navUser = getUser();                   /* sesiunea curentă din tab */
+    const nav = document.querySelector('.nav-links');
+    if(navUser && navUser.role==='admin'){
+      nav.innerHTML='<li><a href="admin.html">Admin</a></li><li><a href="logs.html">Logs</a></li>';
+    }else if(navUser){
+      nav.innerHTML='<li><a href="imprumuta.html">Împrumută</a></li><li><a href="dashboard.html">Contul Meu</a></li>';
+    }else{
+      nav.innerHTML='<li><a href="register.html">Register</a></li>';
+    }
+  </script>
 
-    <!-- Cereri -->
-    <section class="section-bg">
-      <h2 class="section-title">Toate Cererile de Împrumut</h2>
-      <div id="requests-log" class="table-container"></div>
-    </section>
+  <!-- Form login -->
+  <main class="form-wrapper">
+    <div class="form-card">
+      <h2 class="section-title">Autentificare</h2>
+      <form id="loginForm">
+        <label for="user">Username sau Email:</label>
+        <input id="user" required placeholder="Username sau email">
+        <label for="pass">Parolă:</label>
+        <input id="pass" type="password" required placeholder="*****">
+        <button class="submit-btn">Login</button>
+        <p id="loginMsg" class="form-msg"></p>
+      </form>
+      <p style="text-align:center;margin-top:1rem;">
+        Nu ai cont? <a href="register.html">Înregistrează‑te</a>
+      </p>
+    </div>
   </main>
 
-  <footer class="footer">
-    <p>&copy; 2025 CapyBank</p>
-  </footer>
+  <footer class="footer"><p>&copy; 2025 CapyBank</p></footer>
 
+  <!-- Script login -->
   <script>
-    // 1) Fetch utilizatori remote
-    (async () => {
-      const uDiv = document.getElementById('users-log');
-      try {
-        const res = await fetch(USERS_BASE);
-        if (!res.ok) throw new Error(res.status);
-        const users = await res.json();
-        if (users.length === 0) {
-          uDiv.innerHTML = '<p style="text-align:center;color:#666;">Niciun utilizator.</p>';
-        } else {
-          const tbl = document.createElement('table');
-          tbl.innerHTML = `
-            <thead>
-              <tr>
-                <th>#</th><th>Username</th><th>Email</th><th>Role</th><th>Parolă</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${users.map((u,i)=>`
-                <tr>
-                  <td>${i+1}</td>
-                  <td>${u.username}</td>
-                  <td>${u.email}</td>
-                  <td>${u.role}</td>
-                  <td style="word-break:break-all;">${u.password}</td>
-                </tr>
-              `).join('')}
-            </tbody>`;
-          uDiv.appendChild(tbl);
-        }
-      } catch (err) {
-        uDiv.innerHTML = `<p style="color:red;text-align:center;">Eroare la fetch utilizatori: ${err.message}</p>`;
-      }
-    })();
+    async function hashPassword(pw){
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+      return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+    }
 
-    // 2) Fetch cereri remote
-    (async () => {
-      const rDiv = document.getElementById('requests-log');
-      try {
-        const res = await fetch(CERERI_BASE);
-        if (!res.ok) throw new Error(res.status);
-        const cereri = await res.json();
-        if (cereri.length === 0) {
-          rDiv.innerHTML = '<p style="text-align:center;color:#666;">Nicio cerere.</p>';
-        } else {
-          const tbl = document.createElement('table');
-          tbl.innerHTML = `
-            <thead>
-              <tr>
-                <th>#</th><th>ID</th><th>Data</th><th>Status</th><th>Decizie</th>
-                <th>Nume</th><th>Email</th><th>Sumă</th><th>Perioadă</th><th>Motiv</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${cereri.map((c,i)=>`
-                <tr>
-                  <td>${i+1}</td>
-                  <td>${c._id}</td>
-                  <td>${c.createdAt}</td>
-                  <td>${c.status}</td>
-                  <td>${c.decisionDate||'–'}</td>
-                  <td>${c.nume}</td>
-                  <td>${c.email}</td>
-                  <td>${c.suma}</td>
-                  <td>${c.perioada}</td>
-                  <td>${c.motiv}</td>
-                </tr>
-              `).join('')}
-            </tbody>`;
-          rDiv.appendChild(tbl);
-        }
-      } catch (err) {
-        rDiv.innerHTML = `<p style="color:red;text-align:center;">Eroare la fetch cereri: ${err.message}</p>`;
+    document.getElementById('loginForm').addEventListener('submit', async e=>{
+      e.preventDefault();
+      const uname = user.value.trim();
+      const pw    = pass.value;
+      const users = JSON.parse(localStorage.getItem('users'))||[];
+      const hash  = await hashPassword(pw);
+
+      const found = users.find(u=>
+        (u.username===uname || u.email===uname) && u.passwordHash===hash
+      );
+
+      if(!found){
+        loginMsg.style.color='red';
+        return loginMsg.textContent='Date invalide.';
       }
-    })();
+
+      /* salvăm sesiunea în tabelul sessions (per-tab) */
+      setUser({ username:found.username, email:found.email, role:found.role });
+
+      loginMsg.style.color='green';
+      loginMsg.textContent='Login reușit! Se încarcă...';
+
+      /* redirecționare: user → imprumuta, admin → admin */
+      setTimeout(()=>{
+        location.replace(found.role==='admin' ? 'admin.html' : 'imprumuta.html');
+      },1000);
+    });
   </script>
 </body>
 </html>
