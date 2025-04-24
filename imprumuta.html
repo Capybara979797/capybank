@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>CapyBank – Împrumută</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="common-auth.js"></script>
+  <script>
+    const CRUD_BASE = 'https://crudcrud.com/api/9eefcd660d40431b80122294d2c4441c/cereri';
+  </script>
+</head>
+<body>
+  <script>
+    const cu = getUser();
+    if (!cu)       location.replace('login.html');
+    if (cu.role==='admin') location.replace('admin.html');
+    capyChan.onmessage = e => { if (e.data.type==='update-cereri') location.reload(); };
+  </script>
+
+  <header class="navbar">
+    <a href="index.html" class="logo">CapyBank</a>
+    <ul class="nav-links">
+      <li><a href="imprumuta.html" class="active">Împrumută</a></li>
+      <li><a href="dashboard.html">Contul Meu</a></li>
+    </ul>
+    <div class="nav-actions">
+      <span class="greeting">Salut, <span id="userName"></span></span>
+      <button onclick="logout()" class="btn-secondary">Logout</button>
+    </div>
+    <div class="burger"
+         onclick="this.classList.toggle('toggle'); document.querySelector('.nav-links').classList.toggle('nav-active');">
+      <span></span><span></span><span></span>
+    </div>
+  </header>
+  <script>document.getElementById('userName').textContent = cu.username;</script>
+
+  <main class="form-wrapper">
+    <div class="form-card">
+      <h2 class="section-title">Solicită un împrumut</h2>
+      <form id="loanForm">
+        <label for="nume">Nume complet:</label>
+        <input type="text" id="nume" required placeholder="Ex: Andrei Popescu">
+
+        <label for="email">Email:</label>
+        <input type="email" id="email" readonly>
+
+        <label for="suma">Sumă (RON):</label>
+        <input type="number" id="suma" required placeholder="1000">
+
+        <label for="perioada">Perioadă:</label>
+        <input type="text" id="perioada" required placeholder="12 luni">
+
+        <label for="motiv">Motiv:</label>
+        <textarea id="motiv" rows="3" required placeholder="Ex: Renovare apartament"></textarea>
+
+        <div class="form-actions">
+          <button type="submit" class="submit-btn">Trimite cererea</button>
+          <p id="formMsg" class="form-msg"></p>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <footer class="footer"><p>&copy; 2025 CapyBank</p></footer>
+
+  <script>
+    // Pre-umplem email-ul
+    document.getElementById('email').value = cu.email;
+
+    loanForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      const msg = document.getElementById('formMsg');
+      msg.textContent = '';
+
+      const cerere = {
+        createdAt: new Date().toLocaleString(),
+        status:    'Pending',
+        nume:      document.getElementById('nume').value.trim(),
+        email:     cu.email,
+        suma:      +document.getElementById('suma').value,
+        perioada:  document.getElementById('perioada').value.trim(),
+        motiv:     document.getElementById('motiv').value.trim()
+      };
+
+      try {
+        // Trimitem pe CrudCrud
+        const res = await fetch(CRUD_BASE, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify(cerere)
+        });
+        if (!res.ok) throw new Error(`Status: ${res.status}`);
+
+        // Actualizare jurnal local
+        const logs = JSON.parse(localStorage.getItem('logsCereri'))||[];
+        logs.push({ ...cerere, id: await res.json().then(r=>r._id) });
+        localStorage.setItem('logsCereri', JSON.stringify(logs));
+
+        msg.style.color = '#2a9d8f';
+        msg.textContent = 'Cererea a fost trimisă cu succes.';
+        capyChan.postMessage({ type: 'update-cereri' });
+
+        e.target.reset();
+        document.getElementById('email').value = cu.email;
+      } catch (err) {
+        console.error(err);
+        msg.style.color = 'red';
+        msg.textContent = 'Eroare la salvarea cererii: ' + err.message;
+      }
+    });
+  </script>
+</body>
+</html>

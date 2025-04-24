@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>CapyBank – Înregistrare</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="common-auth.js"></script>
+  <script>
+    // Endpoint CrudCrud pentru utilizatori
+    const USERS_BASE = 'https://crudcrud.com/api/9eefcd660d40431b80122294d2c4441c/utilizatori';
+  </script>
+  <style>
+    /* …stilurile existente… */
+  </style>
+</head>
+<body>
+  <!-- …navbar… -->
+
+  <main class="form-wrapper">
+    <div class="form-card">
+      <h2 class="section-title">Creare cont</h2>
+      <form id="registerForm">
+        <label>Username:</label>
+        <input type="text" id="username" required placeholder="Ex: andrei123">
+        <label>Email:</label>
+        <input type="email" id="email" required placeholder="exemplu@mail.com">
+        <label>Parolă:</label>
+        <input type="password" id="password" required placeholder="*****">
+        <button type="submit" class="submit-btn">Înregistrează-te</button>
+        <p id="regMsg" class="form-msg"></p>
+      </form>
+      <p style="text-align:center; margin-top:1rem;">
+        Ai deja cont? <a href="login.html">Autentifică-te</a>
+      </p>
+    </div>
+  </main>
+
+  <!-- …footer… -->
+
+  <script>
+    async function hashPassword(pw){
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+      return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    }
+
+    document.getElementById('registerForm').addEventListener('submit', async function(e){
+      e.preventDefault();
+      const u = username.value.trim(),
+            mail = email.value.trim(),
+            pw = password.value;
+
+      let users = JSON.parse(localStorage.getItem('users')) || [];
+      if(users.some(x=>x.username===u||x.email===mail)){
+        regMsg.style.color='red';
+        return regMsg.textContent='Username sau email deja folosit.';
+      }
+
+      const pwHash = await hashPassword(pw);
+      const newUser = { username:u, email:mail, password:pw, passwordHash:pwHash, role:'user' };
+
+      // 1) Salvăm local
+      users.push(newUser);
+      localStorage.setItem('users', JSON.stringify(users));
+
+      // 2) Salvăm pe CrudCrud
+      try {
+        const res = await fetch(USERS_BASE, {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json' },
+          body: JSON.stringify(newUser)
+        });
+        if(!res.ok) throw new Error(`Status: ${res.status}`);
+      } catch(err) {
+        console.warn('Eroare salvare remote:', err);
+      }
+
+      regMsg.style.color='green';
+      regMsg.textContent='Înregistrare reușită! Se încarcă...';
+      setTimeout(()=>location.replace('login.html'),1500);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>CapyBank – Contul Meu</title>
+  <link rel="stylesheet" href="style.css"/>
+  <script src="common-auth.js"></script>
+  <script>
+    const CRUD_BASE = 'https://crudcrud.com/api/9eefcd660d40431b80122294d2c4441c/cereri';
+  </script>
+</head>
+<body>
+  <script>
+    const cu = getUser();
+    if (!cu) location.replace('login.html');
+    if (cu.role === 'admin') location.replace('admin.html');
+    capyChan.onmessage = e => { if (e.data.type==='update-cereri') location.reload(); };
+  </script>
+
+  <header class="navbar">
+    <a href="index.html" class="logo">CapyBank</a>
+    <ul class="nav-links">
+      <li><a href="imprumuta.html">Împrumută</a></li>
+      <li><a href="dashboard.html" class="active">Contul Meu</a></li>
+    </ul>
+    <div class="nav-actions">
+      <span>Salut, <strong id="userName"></strong></span>
+      <button onclick="logout()" class="btn-secondary">Logout</button>
+    </div>
+    <div class="burger"
+         onclick="this.classList.toggle('toggle'); document.querySelector('.nav-links').classList.toggle('nav-active');">
+      <span></span><span></span><span></span>
+    </div>
+  </header>
+  <script> document.getElementById('userName').textContent = cu.username; </script>
+
+  <main class="admin-wrapper">
+    <h1 class="admin-title">Cererile mele</h1>
+    <div id="summary"  class="section-bg" style="max-width:800px;margin-bottom:2rem;"></div>
+    <div id="my-requests"></div>
+  </main>
+
+  <footer class="footer"><p>&copy; 2025 CapyBank</p></footer>
+
+  <script>
+    (async () => {
+      const resp = await fetch(CRUD_BASE);
+      const list = await resp.json();
+      const mine = list.filter(c => c.email === cu.email);
+
+      const sums = { Pending:0, Accepted:0, Refused:0 };
+      mine.forEach(c => sums[c.status]++);
+
+      document.getElementById('summary').innerHTML = `
+        <h3>Sumar</h3>
+        <p>Pending:  <strong>${sums.Pending}</strong></p>
+        <p>Accepted: <strong>${sums.Accepted}</strong></p>
+        <p>Refused:  <strong>${sums.Refused}</strong></p>
+      `;
+
+      const cont = document.getElementById('my-requests');
+      if (!mine.length) {
+        cont.innerHTML = '<p style="text-align:center;color:#666;">Nu ai nicio cerere.</p>';
+      } else {
+        mine.forEach((c,i) => {
+          const color = c.status==='Accepted'? '#2a9d8f'
+                      : c.status==='Refused'? '#e63946' : '#555';
+          const card = document.createElement('div');
+          card.className = 'form-card request';
+          card.innerHTML = `
+            <h2>Cererea #${i+1}</h2>
+            <p><strong>Data:</strong> ${c.createdAt}</p>
+            <p><strong>Sumă:</strong> ${c.suma} RON</p>
+            <p><strong>Perioadă:</strong> ${c.perioada}</p>
+            <p><strong>Motiv:</strong> ${c.motiv}</p>
+            <p><strong>Status:</strong> <span style="color:${color}">${c.status}</span></p>
+            <div class="actions">
+              <button class="btn-secondary" data-id="${c._id}">Șterge</button>
+            </div>
+          `;
+          cont.appendChild(card);
+        });
+
+        cont.addEventListener('click', async ev => {
+          const btn = ev.target.closest('button[data-id]');
+          if (!btn) return;
+          if (!confirm('Ștergi această cerere?')) return;
+          await fetch(`${CRUD_BASE}/${btn.dataset.id}`, { method:'DELETE' });
+          capyChan.postMessage({ type:'update-cereri' });
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

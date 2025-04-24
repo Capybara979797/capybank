@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>CapyBank – Login</title>
+
+  <!-- Stiluri globale -->
+  <link rel="stylesheet" href="style.css">
+  <!-- Helper per‑tab + BroadcastChannel -->
+  <script src="common-auth.js"></script>
+
+  <!-- Stil intern pentru buton -->
+  <style>
+    .form-card { position: relative; }
+    .form-card .submit-btn{
+      width:100%;max-width:200px;margin:1.5rem auto 0;display:block;
+      background:linear-gradient(45deg,#6a11cb,#2575fc);color:#fff;border:none;
+      padding:0.8rem 0;border-radius:30px;font-weight:600;
+      transition:transform .2s,box-shadow .2s;
+    }
+    .form-card .submit-btn:hover{
+      transform:translateY(-2px);box-shadow:0 6px 18px rgba(38,50,56,.2);
+    }
+    .form-card p a{color:#2575fc;font-weight:500;text-decoration:none;transition:color .3s;}
+    .form-card p a:hover{color:#6a11cb;}
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <header class="navbar">
+    <a href="index.html" class="logo">CapyBank</a>
+    <ul class="nav-links"></ul>
+    <div class="burger"
+         onclick="this.classList.toggle('toggle');document.querySelector('.nav-links').classList.toggle('nav-active');">
+      <span></span><span></span><span></span>
+    </div>
+  </header>
+
+  <!-- Navbar dinamic -->
+  <script>
+    const navUser = getUser();                   /* sesiunea curentă din tab */
+    const nav = document.querySelector('.nav-links');
+    if(navUser && navUser.role==='admin'){
+      nav.innerHTML='<li><a href="admin.html">Admin</a></li><li><a href="logs.html">Logs</a></li>';
+    }else if(navUser){
+      nav.innerHTML='<li><a href="imprumuta.html">Împrumută</a></li><li><a href="dashboard.html">Contul Meu</a></li>';
+    }else{
+      nav.innerHTML='<li><a href="register.html">Register</a></li>';
+    }
+  </script>
+
+  <!-- Form login -->
+  <main class="form-wrapper">
+    <div class="form-card">
+      <h2 class="section-title">Autentificare</h2>
+      <form id="loginForm">
+        <label for="user">Username sau Email:</label>
+        <input id="user" required placeholder="Username sau email">
+        <label for="pass">Parolă:</label>
+        <input id="pass" type="password" required placeholder="*****">
+        <button class="submit-btn">Login</button>
+        <p id="loginMsg" class="form-msg"></p>
+      </form>
+      <p style="text-align:center;margin-top:1rem;">
+        Nu ai cont? <a href="register.html">Înregistrează‑te</a>
+      </p>
+    </div>
+  </main>
+
+  <footer class="footer"><p>&copy; 2025 CapyBank</p></footer>
+
+  <!-- Script login -->
+  <script>
+    async function hashPassword(pw){
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+      return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async e=>{
+      e.preventDefault();
+      const uname = user.value.trim();
+      const pw    = pass.value;
+      const users = JSON.parse(localStorage.getItem('users'))||[];
+      const hash  = await hashPassword(pw);
+
+      const found = users.find(u=>
+        (u.username===uname || u.email===uname) && u.passwordHash===hash
+      );
+
+      if(!found){
+        loginMsg.style.color='red';
+        return loginMsg.textContent='Date invalide.';
+      }
+
+      /* salvăm sesiunea în tabelul sessions (per-tab) */
+      setUser({ username:found.username, email:found.email, role:found.role });
+
+      loginMsg.style.color='green';
+      loginMsg.textContent='Login reușit! Se încarcă...';
+
+      /* redirecționare: user → imprumuta, admin → admin */
+      setTimeout(()=>{
+        location.replace(found.role==='admin' ? 'admin.html' : 'imprumuta.html');
+      },1000);
+    });
+  </script>
+</body>
+</html>
