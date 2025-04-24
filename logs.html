@@ -11,14 +11,58 @@
     const CERERI_BASE = 'https://crudcrud.com/api/9eefcd660d40431b80122294d2c4441c/cereri';
   </script>
   <style>
-    /* …stilurile existente… */
+    .logs-container {
+      max-width: 1000px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    .section-bg {
+      background: #fff;
+      border-radius: 16px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    }
+    .section-title {
+      text-align: center;
+      font-size: 2rem;
+      color: #5b35ff;
+      margin-bottom: 1rem;
+    }
+    .table-container {
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    thead {
+      background: #5b35ff;
+      color: #fff;
+    }
+    th, td {
+      padding: 0.75rem;
+      border: 1px solid #ddd;
+      text-align: center;
+      font-size: 0.95rem;
+    }
+    tbody tr:nth-child(even) {
+      background: #f9f9f9;
+    }
+    @media (max-width: 768px) {
+      th, td {
+        padding: 0.5rem;
+        font-size: 0.85rem;
+      }
+    }
   </style>
 </head>
 <body>
   <script>
     const cu = getUser();
-    if(!cu || cu.role!=='admin') location.replace('index.html');
-    capyChan.onmessage = e => { if(e.data.type==='update-cereri') location.reload(); };
+    if (!cu || cu.role!=='admin') location.replace('index.html');
+    capyChan.onmessage = e => { if (e.data.type==='update-cereri') location.reload(); };
   </script>
 
   <header class="navbar">
@@ -28,40 +72,47 @@
       <li><a href="logs.html" class="active">Logs</a></li>
     </ul>
     <div class="burger"
-         onclick="this.classList.toggle('toggle');document.querySelector('.nav-links').classList.toggle('nav-active');">
+         onclick="this.classList.toggle('toggle'); document.querySelector('.nav-links').classList.toggle('nav-active');">
       <span></span><span></span><span></span>
     </div>
   </header>
 
   <main class="logs-container">
+    <!-- Utilizatori -->
     <section class="section-bg">
       <h2 class="section-title">Utilizatori Înregistrați</h2>
       <div id="users-log" class="table-container"></div>
     </section>
+
+    <!-- Cereri -->
     <section class="section-bg">
       <h2 class="section-title">Toate Cererile de Împrumut</h2>
       <div id="requests-log" class="table-container"></div>
     </section>
   </main>
 
-  <footer class="footer"><p>&copy; 2025 CapyBank</p></footer>
+  <footer class="footer">
+    <p>&copy; 2025 CapyBank</p>
+  </footer>
 
   <script>
-    // 1) Fetch utilizatori de pe CrudCrud
-    (async()=>{
+    // 1) Fetch și afișare utilizatori
+    (async function(){
       const uDiv = document.getElementById('users-log');
       try {
-        const res = await fetch(USERS_BASE);
-        if(!res.ok) throw new Error(res.status);
-        const users = await res.json();
-        if(!users.length) {
+        let res = await fetch(USERS_BASE);
+        if (!res.ok) throw new Error(res.status);
+        let users = await res.json();
+        if (users.length === 0) {
           uDiv.innerHTML = '<p style="text-align:center;color:#666;">Niciun utilizator.</p>';
         } else {
           const tbl = document.createElement('table');
           tbl.innerHTML = `
-            <thead><tr>
-              <th>#</th><th>Username</th><th>Email</th><th>Role</th><th>Parolă</th>
-            </tr></thead>
+            <thead>
+              <tr>
+                <th>#</th><th>Username</th><th>Email</th><th>Role</th><th>Parolă</th>
+              </tr>
+            </thead>
             <tbody>
               ${users.map((u,i)=>`
                 <tr>
@@ -70,44 +121,56 @@
                   <td>${u.email}</td>
                   <td>${u.role}</td>
                   <td style="word-break:break-all;">${u.password}</td>
-                </tr>`).join('')}
+                </tr>
+              `).join('')}
             </tbody>`;
           uDiv.appendChild(tbl);
         }
       } catch(err) {
-        console.error('Fetch users log error:', err);
         uDiv.innerHTML = `<p style="color:red;text-align:center;">Eroare: ${err.message}</p>`;
       }
     })();
 
-    // 2) Fetch cereri din logsCereri (append-only local) dacă vrei istoric local
-    const cereriLocal = JSON.parse(localStorage.getItem('logsCereri'))||[];
-    const rDiv = document.getElementById('requests-log');
-    if(!cereriLocal.length){
-      rDiv.innerHTML = '<p style="text-align:center;color:#666;">Nicio cerere.</p>';
-    } else {
-      const tbl2 = document.createElement('table');
-      tbl2.innerHTML = `
-        <thead><tr>
-          <th>#</th><th>ID</th><th>Data</th><th>Status</th><th>Nume</th>
-          <th>Email</th><th>Sumă</th><th>Perioadă</th><th>Motiv</th>
-        </tr></thead>
-        <tbody>
-          ${cereriLocal.map((c,i)=>`
-            <tr>
-              <td>${i+1}</td>
-              <td>${c.id}</td>
-              <td>${c.createdAt}</td>
-              <td>${c.status}</td>
-              <td>${c.nume}</td>
-              <td>${c.email}</td>
-              <td>${c.suma}</td>
-              <td>${c.perioada}</td>
-              <td>${c.motiv}</td>
-            </tr>`).join('')}
-        </tbody>`;
-      rDiv.appendChild(tbl2);
-    }
+    // 2) Fetch și afișare cereri
+    (async function(){
+      const rDiv = document.getElementById('requests-log');
+      try {
+        let res = await fetch(CERERI_BASE);
+        if (!res.ok) throw new Error(res.status);
+        let cereri = await res.json();
+        if (cereri.length === 0) {
+          rDiv.innerHTML = '<p style="text-align:center;color:#666;">Nicio cerere.</p>';
+        } else {
+          const tbl = document.createElement('table');
+          tbl.innerHTML = `
+            <thead>
+              <tr>
+                <th>#</th><th>ID</th><th>Data</th><th>Status</th><th>Decizie</th>
+                <th>Nume</th><th>Email</th><th>Sumă</th><th>Perioadă</th><th>Motiv</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${cereri.map((c,i)=>`
+                <tr>
+                  <td>${i+1}</td>
+                  <td>${c._id}</td>
+                  <td>${c.createdAt}</td>
+                  <td>${c.status}</td>
+                  <td>${c.decisionDate||'–'}</td>
+                  <td>${c.nume}</td>
+                  <td>${c.email}</td>
+                  <td>${c.suma}</td>
+                  <td>${c.perioada}</td>
+                  <td>${c.motiv}</td>
+                </tr>
+              `).join('')}
+            </tbody>`;
+          rDiv.appendChild(tbl);
+        }
+      } catch(err) {
+        rDiv.innerHTML = `<p style="color:red;text-align:center;">Eroare: ${err.message}</p>`;
+      }
+    })();
   </script>
 </body>
 </html>

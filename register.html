@@ -6,27 +6,88 @@
   <title>CapyBank – Înregistrare</title>
   <link rel="stylesheet" href="style.css">
   <script src="common-auth.js"></script>
-  <script>
-    // Endpoint CrudCrud pentru utilizatori
-    const USERS_BASE = 'https://crudcrud.com/api/9eefcd660d40431b80122294d2c4441c/utilizatori';
-  </script>
   <style>
-    /* …stilurile existente… */
+    /* ==== Stil intern pentru register.html ==== */
+    .form-card {
+      position: relative;
+      padding: 2rem;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+      max-width: 400px;
+      margin: 4rem auto;
+    }
+    .form-card h2 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      color: #5b35ff;
+    }
+    .form-card label {
+      display: block;
+      margin-top: 1rem;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: #444;
+    }
+    .form-card input {
+      width: 100%;
+      padding: 0.8rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    .form-card .submit-btn {
+      display: block;
+      width: 100%;
+      margin: 2rem 0 0;
+      padding: 0.8rem;
+      background: linear-gradient(45deg, #ff758c, #ff7eb3);
+      color: #fff;
+      border: none;
+      border-radius: 30px;
+      font-size: 1rem;
+      font-weight: 600;
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .form-card .submit-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(38,50,56,0.2);
+    }
+    .form-card p a {
+      color: #ff7eb3;
+      font-weight: 500;
+      text-decoration: none;
+    }
+    .form-card p a:hover {
+      color: #ff758c;
+    }
   </style>
 </head>
 <body>
-  <!-- …navbar… -->
+  <header class="navbar">
+    <a href="index.html" class="logo">CapyBank</a>
+    <ul class="nav-links"></ul>
+    <div class="burger"
+         onclick="this.classList.toggle('toggle'); document.querySelector('.nav-links').classList.toggle('nav-active');">
+      <span></span><span></span><span></span>
+    </div>
+  </header>
 
   <main class="form-wrapper">
     <div class="form-card">
-      <h2 class="section-title">Creare cont</h2>
+      <h2>Creare cont</h2>
       <form id="registerForm">
-        <label>Username:</label>
+        <label for="username">Username:</label>
         <input type="text" id="username" required placeholder="Ex: andrei123">
-        <label>Email:</label>
+
+        <label for="email">Email:</label>
         <input type="email" id="email" required placeholder="exemplu@mail.com">
-        <label>Parolă:</label>
+
+        <label for="password">Parolă:</label>
         <input type="password" id="password" required placeholder="*****">
+
         <button type="submit" class="submit-btn">Înregistrează-te</button>
         <p id="regMsg" class="form-msg"></p>
       </form>
@@ -36,7 +97,9 @@
     </div>
   </main>
 
-  <!-- …footer… -->
+  <footer class="footer">
+    <p>&copy; 2025 CapyBank</p>
+  </footer>
 
   <script>
     async function hashPassword(pw){
@@ -59,24 +122,12 @@
       const pwHash = await hashPassword(pw);
       const newUser = { username:u, email:mail, password:pw, passwordHash:pwHash, role:'user' };
 
-      // 1) Salvăm local
+      // Salvăm local
       users.push(newUser);
       localStorage.setItem('users', JSON.stringify(users));
 
-      // 2) Salvăm pe CrudCrud
-      try {
-        const res = await fetch(USERS_BASE, {
-          method:'POST',
-          headers:{ 'Content-Type':'application/json' },
-          body: JSON.stringify(newUser)
-        });
-        if(!res.ok) throw new Error(`Status: ${res.status}`);
-      } catch(err) {
-        console.warn('Eroare salvare remote:', err);
-      }
-
       regMsg.style.color='green';
-      regMsg.textContent='Înregistrare reușită! Se încarcă...';
+      regMsg.textContent='Înregistrare reușită! Redirecționare...';
       setTimeout(()=>location.replace('login.html'),1500);
     });
   </script>
