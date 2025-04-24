@@ -2,22 +2,22 @@
 <html lang="ro">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>CapyBank – Împrumută</title>
   <link rel="stylesheet" href="style.css" />
   <script src="common-auth.js"></script>
-  <!-- Înlocuieşte vechea const Crud pentru cereri: -->
-<script>
-  const CRUD_BASE = 'https://crudcrud.com/api/a538676501454cb29ba58ee50d21748c/cereri';
-</script>
-
+  <script>
+    // Endpoint-uri CrudCrud
+    const CRUD_BASE      = 'https://crudcrud.com/api/a538676501454cb29ba58ee50d21748c/cereri';
+    const CRUD_LOGS_BASE = 'https://crudcrud.com/api/a538676501454cb29ba58ee50d21748c/logsCereri';
+  </script>
 </head>
 <body>
   <script>
     const cu = getUser();
-    if (!cu)       location.replace('login.html');
-    if (cu.role==='admin') location.replace('admin.html');
-    capyChan.onmessage = e => { if (e.data.type==='update-cereri') location.reload(); };
+    if (!cu) location.replace('login.html');
+    if (cu.role === 'admin') location.replace('admin.html');
+    capyChan.onmessage = e => { if (e.data.type === 'update-cereri') location.reload(); };
   </script>
 
   <header class="navbar">
@@ -30,12 +30,14 @@
       <span class="greeting">Salut, <span id="userName"></span></span>
       <button onclick="logout()" class="btn-secondary">Logout</button>
     </div>
-    <div class="burger"
-         onclick="this.classList.toggle('toggle'); document.querySelector('.nav-links').classList.toggle('nav-active');">
+    <div class="burger" onclick="this.classList.toggle('toggle'); document.querySelector('.nav-links').classList.toggle('nav-active');">
       <span></span><span></span><span></span>
     </div>
   </header>
-  <script>document.getElementById('userName').textContent = cu.username;</script>
+
+  <script>
+    document.getElementById('userName').textContent = cu.username;
+  </script>
 
   <main class="form-wrapper">
     <div class="form-card">
@@ -64,43 +66,49 @@
     </div>
   </main>
 
-  <footer class="footer"><p>&copy; 2025 CapyBank</p></footer>
+  <footer class="footer">
+    <p>&copy; 2025 CapyBank</p>
+  </footer>
 
   <script>
-    // Pre-umplem email-ul
+    // Pre-umplem email-ul cu cel al utilizatorului curent
     document.getElementById('email').value = cu.email;
 
-    loanForm.addEventListener('submit', async e => {
+    // Gestionare trimitere formular împrumut
+    document.getElementById('loanForm').addEventListener('submit', async e => {
       e.preventDefault();
       const msg = document.getElementById('formMsg');
       msg.textContent = '';
 
       const cerere = {
         createdAt: new Date().toLocaleString(),
-        status:    'Pending',
-        nume:      document.getElementById('nume').value.trim(),
-        email:     cu.email,
-        suma:      +document.getElementById('suma').value,
-        perioada:  document.getElementById('perioada').value.trim(),
-        motiv:     document.getElementById('motiv').value.trim()
+        status: 'Pending',
+        nume: document.getElementById('nume').value.trim(),
+        email: cu.email,
+        suma: +document.getElementById('suma').value,
+        perioada: document.getElementById('perioada').value.trim(),
+        motiv: document.getElementById('motiv').value.trim()
       };
 
       try {
-        // Trimitem pe CrudCrud
+        // 1) Înregistrare cerere principală
         const res = await fetch(CRUD_BASE, {
-          method:  'POST',
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify(cerere)
+          body: JSON.stringify(cerere)
         });
         if (!res.ok) throw new Error(`Status: ${res.status}`);
+        const { _id } = await res.json();
 
-        // Actualizare jurnal local
-        const logs = JSON.parse(localStorage.getItem('logsCereri'))||[];
-        logs.push({ ...cerere, id: await res.json().then(r=>r._id) });
-        localStorage.setItem('logsCereri', JSON.stringify(logs));
+        // 2) Backup în colecția logsCereri
+        await fetch(CRUD_LOGS_BASE, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...cerere, id: _id })
+        });
 
         msg.style.color = '#2a9d8f';
-        msg.textContent = 'Cererea a fost trimisă cu succes.';
+        msg.textContent = 'Cererea a fost trimisă și înregistrată în jurnal.';
         capyChan.postMessage({ type: 'update-cereri' });
 
         e.target.reset();
