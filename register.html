@@ -1,14 +1,17 @@
 <!DOCTYPE html>
 <html lang="ro">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>CapyBank – Înregistrare</title>
   <!-- Stiluri comune -->
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css">
+  <!-- Helpers autentificare per-tab -->
+  <script src="common-auth.js"></script>
   <!-- Endpoint CrudCrud pentru utilizatori -->
   <script>
-    const USERS_BASE = 'https://crudcrud.com/api/a538676501454cb29ba58ee50d21748c/utilizatori';
+    // Înlocuiește cu cheia ta valabilă
+    const USERS_BASE = 'https://crudcrud.com/api/ad942507f57e488aa5d2cc4b578176c1/utilizatori';
   </script>
   <style>
     /* ==== Stil intern pentru register.html ==== */
@@ -19,7 +22,7 @@
       border-radius: 16px;
       box-shadow: 0 12px 30px rgba(0,0,0,0.08);
       max-width: 400px;
-      margin: 6rem auto;
+      margin: 4rem auto;
     }
     .form-card h2 {
       text-align: center;
@@ -70,17 +73,14 @@
 </head>
 <body>
   <header class="navbar">
-    <div class="container">
-      <a href="index.html" class="logo">CapyBank</a>
-      <nav>
-        <ul class="nav-links">
-          <li><a href="index.html">Acasă</a></li>
-          <li><a href="login.html">Login</a></li>
-        </ul>
-        <div class="burger" onclick="this.classList.toggle('toggle'); document.querySelector('.nav-links').classList.toggle('nav-active');">
-          <span></span><span></span><span></span>
-        </div>
-      </nav>
+    <a href="index.html" class="logo">CapyBank</a>
+    <ul class="nav-links">
+      <li><a href="index.html">Acasă</a></li>
+      <li><a href="login.html">Login</a></li>
+    </ul>
+    <div class="burger"
+         onclick="this.classList.toggle('toggle'); document.querySelector('.nav-links').classList.toggle('nav-active');">
+      <span></span><span></span><span></span>
     </div>
   </header>
 
@@ -111,48 +111,51 @@
   </footer>
 
   <script>
-    async function hashPassword(pw) {
+    async function hashPassword(pw){
       const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
-      return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+      return Array.from(new Uint8Array(buf))
+                  .map(b=>b.toString(16).padStart(2,'0')).join('');
     }
 
-    document.getElementById('registerForm').addEventListener('submit', async function(e) {
+    document.getElementById('registerForm').addEventListener('submit', async function(e){
       e.preventDefault();
       const u    = username.value.trim(),
             mail = email.value.trim(),
             pw   = password.value,
             msg  = regMsg;
 
-      // Verificăm unicitatea locală
+      // Validare unicitate locală
       let users = JSON.parse(localStorage.getItem('users')) || [];
-      if (users.some(x => x.username === u || x.email === mail)) {
+      if(users.some(x=>x.username===u || x.email===mail)){
         msg.style.color = 'red';
         return msg.textContent = 'Username sau email deja folosit.';
       }
 
       // Hash și obiect utilizator
       const pwHash = await hashPassword(pw);
-      const newUser = { username: u, email: mail, password: pw, passwordHash: pwHash, role: 'user' };
+      const newUser = { username:u, email:mail, password:pw, passwordHash:pwHash, role:'user' };
 
-      // Salvăm local
+      // 1) Salvăm în LocalStorage
       users.push(newUser);
       localStorage.setItem('users', JSON.stringify(users));
 
-      // Trimitem și către CrudCrud
+      // 2) POST pe CrudCrud
       try {
         const res = await fetch(USERS_BASE, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type':'application/json' },
           body: JSON.stringify(newUser)
         });
         if (!res.ok) throw new Error(res.status);
       } catch(err) {
-        console.warn('Eroare salvare remote utilizator:', err);
+        console.error('Eroare salvare remote utilizator:', err);
+        // dar continuăm, căci avem backup local
       }
 
+      // Feedback și redirect
       msg.style.color = 'green';
-      msg.textContent = 'Înregistrare reușită! Redirecționare…';
-      setTimeout(() => location.replace('login.html'), 1500);
+      msg.textContent = 'Înregistrare reușită! Redirecționare...';
+      setTimeout(()=>location.replace('login.html'), 1500);
     });
   </script>
 </body>
