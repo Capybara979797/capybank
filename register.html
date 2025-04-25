@@ -4,14 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>CapyBank – Înregistrare</title>
-  <!-- Stiluri comune -->
   <link rel="stylesheet" href="style.css">
-  <!-- Helpers autentificare per-tab -->
   <script src="common-auth.js"></script>
-  <!-- Endpoint CrudCrud pentru utilizatori -->
   <script>
-    // Înlocuiește cu cheia ta valabilă
-    const USERS_BASE = 'https://crudcrud.com/api/ad942507f57e488aa5d2cc4b578176c1/utilizatori';
+    // Endpoint CrudCrud pentru utilizatori actualizat
+    const USERS_BASE = 'https://crudcrud.com/api/8c55961725c94977a4d3e3ed7725d836/utilizatori';
   </script>
   <style>
     /* ==== Stil intern pentru register.html ==== */
@@ -106,9 +103,7 @@
     </div>
   </main>
 
-  <footer class="footer">
-    <p>&copy; 2025 CapyBank</p>
-  </footer>
+  <footer class="footer"><p>&copy; 2025 CapyBank</p></footer>
 
   <script>
     async function hashPassword(pw){
@@ -119,40 +114,37 @@
 
     document.getElementById('registerForm').addEventListener('submit', async function(e){
       e.preventDefault();
+
       const u    = username.value.trim(),
             mail = email.value.trim(),
             pw   = password.value,
             msg  = regMsg;
 
-      // Validare unicitate locală
       let users = JSON.parse(localStorage.getItem('users')) || [];
       if(users.some(x=>x.username===u || x.email===mail)){
         msg.style.color = 'red';
         return msg.textContent = 'Username sau email deja folosit.';
       }
 
-      // Hash și obiect utilizator
-      const pwHash = await hashPassword(pw);
+      const pwHash  = await hashPassword(pw);
       const newUser = { username:u, email:mail, password:pw, passwordHash:pwHash, role:'user' };
 
-      // 1) Salvăm în LocalStorage
+      // 1) LocalStorage
       users.push(newUser);
       localStorage.setItem('users', JSON.stringify(users));
 
-      // 2) POST pe CrudCrud
+      // 2) CrudCrud
       try {
         const res = await fetch(USERS_BASE, {
           method: 'POST',
-          headers: { 'Content-Type':'application/json' },
+          headers:{ 'Content-Type':'application/json' },
           body: JSON.stringify(newUser)
         });
         if (!res.ok) throw new Error(res.status);
-      } catch(err) {
-        console.error('Eroare salvare remote utilizator:', err);
-        // dar continuăm, căci avem backup local
+      } catch (err) {
+        console.warn('Eroare salvare remote utilizator:', err);
       }
 
-      // Feedback și redirect
       msg.style.color = 'green';
       msg.textContent = 'Înregistrare reușită! Redirecționare...';
       setTimeout(()=>location.replace('login.html'), 1500);

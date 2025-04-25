@@ -7,9 +7,9 @@
   <link rel="stylesheet" href="style.css" />
   <script src="common-auth.js"></script>
   <script>
-    // Endpoint-uri CrudCrud
-    const CRUD_BASE      = 'https://crudcrud.com/ad942507f57e488aa5d2cc4b578176c1/cereri';
-    const CRUD_LOGS_BASE = 'https://crudcrud.com/api/ad942507f57e488aa5d2cc4b578176c1/logsCereri';
+    // Endpoint principal și backup
+    const CRUD_BASE        = 'https://crudcrud.com/api/8c55961725c94977a4d3e3ed7725d836/cereri';
+    const LOGS_CERERI_BASE = 'https://crudcrud.com/api/8c55961725c94977a4d3e3ed7725d836/logsCereri';
   </script>
 </head>
 <body>
@@ -27,17 +27,15 @@
       <li><a href="dashboard.html">Contul Meu</a></li>
     </ul>
     <div class="nav-actions">
-      <span class="greeting">Salut, <span id="userName"></span></span>
+      <span>Salut, <strong id="userName"></strong></span>
       <button onclick="logout()" class="btn-secondary">Logout</button>
     </div>
-    <div class="burger" onclick="this.classList.toggle('toggle'); document.querySelector('.nav-links').classList.toggle('nav-active');">
+    <div class="burger"
+         onclick="this.classList.toggle('toggle'); document.querySelector('.nav-links').classList.toggle('nav-active');">
       <span></span><span></span><span></span>
     </div>
   </header>
-
-  <script>
-    document.getElementById('userName').textContent = cu.username;
-  </script>
+  <script> document.getElementById('userName').textContent = cu.username; </script>
 
   <main class="form-wrapper">
     <div class="form-card">
@@ -45,19 +43,14 @@
       <form id="loanForm">
         <label for="nume">Nume complet:</label>
         <input type="text" id="nume" required placeholder="Ex: Andrei Popescu">
-
         <label for="email">Email:</label>
         <input type="email" id="email" readonly>
-
         <label for="suma">Sumă (RON):</label>
         <input type="number" id="suma" required placeholder="1000">
-
         <label for="perioada">Perioadă:</label>
         <input type="text" id="perioada" required placeholder="12 luni">
-
         <label for="motiv">Motiv:</label>
         <textarea id="motiv" rows="3" required placeholder="Ex: Renovare apartament"></textarea>
-
         <div class="form-actions">
           <button type="submit" class="submit-btn">Trimite cererea</button>
           <p id="formMsg" class="form-msg"></p>
@@ -66,57 +59,46 @@
     </div>
   </main>
 
-  <footer class="footer">
-    <p>&copy; 2025 CapyBank</p>
-  </footer>
+  <footer class="footer"><p>&copy; 2025 CapyBank</p></footer>
 
   <script>
-    // Pre-umplem email-ul cu cel al utilizatorului curent
     document.getElementById('email').value = cu.email;
-
-    // Gestionare trimitere formular împrumut
-    document.getElementById('loanForm').addEventListener('submit', async e => {
+    loanForm.addEventListener('submit', async e => {
       e.preventDefault();
-      const msg = document.getElementById('formMsg');
-      msg.textContent = '';
-
+      formMsg.textContent = '';
       const cerere = {
-        createdAt: new Date().toLocaleString(),
-        status: 'Pending',
-        nume: document.getElementById('nume').value.trim(),
-        email: cu.email,
-        suma: +document.getElementById('suma').value,
-        perioada: document.getElementById('perioada').value.trim(),
-        motiv: document.getElementById('motiv').value.trim()
+        createdAt:   new Date().toLocaleString(),
+        status:      'Pending',
+        nume:        nume.value.trim(),
+        email:       cu.email,
+        suma:        +suma.value,
+        perioada:    perioada.value.trim(),
+        motiv:       motiv.value.trim()
       };
-
       try {
-        // 1) Înregistrare cerere principală
+        // 1) Post cerere principală
         const res = await fetch(CRUD_BASE, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(cerere)
+          method:  'POST',
+          headers: { 'Content-Type':'application/json' },
+          body:    JSON.stringify(cerere)
         });
         if (!res.ok) throw new Error(`Status: ${res.status}`);
         const { _id } = await res.json();
-
-        // 2) Backup în colecția logsCereri
-        await fetch(CRUD_LOGS_BASE, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...cerere, id: _id })
+        // 2) Post backup
+        await fetch(LOGS_CERERI_BASE, {
+          method:  'POST',
+          headers: { 'Content-Type':'application/json' },
+          body:    JSON.stringify({ ...cerere, id: _id })
         });
-
-        msg.style.color = '#2a9d8f';
-        msg.textContent = 'Cererea a fost trimisă și înregistrată în jurnal.';
-        capyChan.postMessage({ type: 'update-cereri' });
-
-        e.target.reset();
-        document.getElementById('email').value = cu.email;
-      } catch (err) {
+        formMsg.style.color = '#2a9d8f';
+        formMsg.textContent = 'Cererea a fost trimisă și înregistrată.';
+        capyChan.postMessage({ type:'update-cereri' });
+        loanForm.reset();
+        email.value = cu.email;
+      } catch(err) {
         console.error(err);
-        msg.style.color = 'red';
-        msg.textContent = 'Eroare la salvarea cererii: ' + err.message;
+        formMsg.style.color = 'red';
+        formMsg.textContent = 'Eroare: ' + err.message;
       }
     });
   </script>

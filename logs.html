@@ -7,62 +7,26 @@
   <link rel="stylesheet" href="style.css"/>
   <script src="common-auth.js"></script>
   <script>
-    const USERS_BASE = 'https://crudcrud.com/api/ad942507f57e488aa5d2cc4b578176c1/utilizatori';
-    const LOGS_BASE  = 'https://crudcrud.com/api/ad942507f57e488aa5d2cc4b578176c1/logsCereri';
+    const USERS_BASE       = 'https://crudcrud.com/api/8c55961725c94977a4d3e3ed7725d836/utilizatori';
+    const LOGS_CERERI_BASE  = 'https://crudcrud.com/api/8c55961725c94977a4d3e3ed7725d836/logsCereri';
   </script>
   <style>
-    .logs-container {
-      max-width: 1000px;
-      margin: 2rem auto;
-      padding: 0 1rem;
-    }
-    .section-bg {
-      background: #fff;
-      border-radius: 16px;
-      padding: 2rem;
-      margin-bottom: 2rem;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-    }
-    .section-title {
-      text-align: center;
-      font-size: 2rem;
-      color: #5b35ff;
-      margin-bottom: 1rem;
-    }
-    .table-container {
-      overflow-x: auto;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 1rem;
-    }
-    thead {
-      background: #5b35ff;
-      color: #fff;
-    }
-    th, td {
-      padding: 0.75rem;
-      border: 1px solid #ddd;
-      text-align: center;
-      font-size: 0.95rem;
-    }
-    tbody tr:nth-child(even) {
-      background: #f9f9f9;
-    }
-    @media (max-width: 768px) {
-      th, td {
-        padding: 0.5rem;
-        font-size: 0.85rem;
-      }
-    }
+    .logs-container{max-width:1000px;margin:2rem auto;padding:0 1rem;}
+    .section-bg{background:#fff;border-radius:12px;padding:2rem;margin-bottom:2rem;box-shadow:0 4px 20px rgba(0,0,0,0.05);}
+    .table-container{overflow-x:auto;margin-top:1rem;}
+    table{width:100%;border-collapse:collapse;}
+    thead{background:#5b35ff;color:#fff;}
+    th,td{padding:.75rem;border:1px solid #ddd;text-align:center;font-size:.9rem;}
+    th{text-transform:uppercase;font-size:.8rem;}
+    tbody tr:nth-child(even){background:#f9f9f9;}
+    @media(max-width:768px){th,td{padding:.5rem;font-size:.8rem;}}
   </style>
 </head>
 <body>
   <script>
     const cu = getUser();
-    if (!cu || cu.role !== 'admin') location.replace('index.html');
-    capyChan.onmessage = e => { if (e.data.type === 'update-cereri') location.reload(); };
+    if (!cu || cu.role!=='admin') location.replace('index.html');
+    capyChan.onmessage = e => { if(e.data.type==='update-cereri') location.reload(); };
   </script>
 
   <header class="navbar">
@@ -78,41 +42,34 @@
   </header>
 
   <main class="logs-container">
-    <!-- Utilizatori Înregistrați -->
     <section class="section-bg">
       <h2 class="section-title">Utilizatori Înregistrați</h2>
       <div id="users-log" class="table-container"></div>
     </section>
-
-    <!-- Jurnal Cereri Backup -->
     <section class="section-bg">
-      <h2 class="section-title">Jurnal Cereri (Backup)</h2>
+      <h2 class="section-title">Toate Cererile de Împrumut (Backup)</h2>
       <div id="requests-log" class="table-container"></div>
     </section>
   </main>
 
-  <footer class="footer">
-    <p>&copy; 2025 CapyBank</p>
-  </footer>
+  <footer class="footer"><p>&copy; 2025 CapyBank</p></footer>
 
   <script>
-    // 1) Fetch și afișare utilizatori
-    (async function(){
+    // Utilizatori
+    (async () => {
       const uDiv = document.getElementById('users-log');
       try {
         const res = await fetch(USERS_BASE);
         if (!res.ok) throw new Error(res.status);
         const users = await res.json();
-        if (users.length === 0) {
+        if (!users.length) {
           uDiv.innerHTML = '<p style="text-align:center;color:#666;">Niciun utilizator.</p>';
         } else {
           const tbl = document.createElement('table');
           tbl.innerHTML = `
-            <thead>
-              <tr>
-                <th>#</th><th>Username</th><th>Email</th><th>Role</th><th>Parolă</th>
-              </tr>
-            </thead>
+            <thead><tr>
+              <th>#</th><th>Username</th><th>Email</th><th>Role</th><th>Parolă</th>
+            </tr></thead>
             <tbody>
               ${users.map((u,i)=>`
                 <tr>
@@ -126,38 +83,35 @@
             </tbody>`;
           uDiv.appendChild(tbl);
         }
-      } catch(err) {
-        uDiv.innerHTML = `<p style="color:red;text-align:center;">Eroare: ${err.message}</p>`;
+      } catch (err) {
+        uDiv.innerHTML = `<p style="text-align:center;color:red;">Eroare fetch utilizatori: ${err.message}</p>`;
       }
     })();
 
-    // 2) Fetch și afișare jurnale cereri din backup
-    (async function(){
+    // Backup cereri
+    (async () => {
       const rDiv = document.getElementById('requests-log');
       try {
-        const res = await fetch(LOGS_BASE);
+        const res = await fetch(LOGS_CERERI_BASE);
         if (!res.ok) throw new Error(res.status);
-        const logs = await res.json();
-        // Sortează cronologic: de la cele mai vechi la cele mai noi
-        logs.sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt));
-        if (logs.length === 0) {
-          rDiv.innerHTML = '<p style="text-align:center;color:#666;">Nicio intrare în jurnal.</p>';
+        const cereri = await res.json();
+        if (!cereri.length) {
+          rDiv.innerHTML = '<p style="text-align:center;color:#666;">Nicio cerere.</p>';
         } else {
           const tbl = document.createElement('table');
           tbl.innerHTML = `
-            <thead>
-              <tr>
-                <th>#</th><th>ID Cerere</th><th>Data</th><th>Status</th><th>Nume</th>
-                <th>Email</th><th>Sumă</th><th>Perioadă</th><th>Motiv</th>
-              </tr>
-            </thead>
+            <thead><tr>
+              <th>#</th><th>ID</th><th>Data</th><th>Status</th><th>Decizie</th>
+              <th>Nume</th><th>Email</th><th>Sumă</th><th>Perioadă</th><th>Motiv</th>
+            </tr></thead>
             <tbody>
-              ${logs.map((c,i)=>`
+              ${cereri.map((c,i)=>`
                 <tr>
                   <td>${i+1}</td>
                   <td>${c.id}</td>
                   <td>${c.createdAt}</td>
                   <td>${c.status}</td>
+                  <td>${c.decisionDate||'–'}</td>
                   <td>${c.nume}</td>
                   <td>${c.email}</td>
                   <td>${c.suma}</td>
@@ -168,8 +122,8 @@
             </tbody>`;
           rDiv.appendChild(tbl);
         }
-      } catch(err) {
-        rDiv.innerHTML = `<p style="color:red;text-align:center;">Eroare: ${err.message}</p>`;
+      } catch (err) {
+        rDiv.innerHTML = `<p style="text-align:center;color:red;">Eroare fetch cereri: ${err.message}</p>`;
       }
     })();
   </script>

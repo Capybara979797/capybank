@@ -4,30 +4,22 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>CapyBank – Admin</title>
-  <!-- Stiluri principale -->
   <link rel="stylesheet" href="style.css"/>
-  <!-- Script autentificare per-tab -->
   <script src="common-auth.js"></script>
-  <!-- Endpoint CrudCrud -->
   <script>
-    const CRUD_BASE = 'https://crudcrud.com/api/ad942507f57e488aa5d2cc4b578176c1/cereri';
+    const CRUD_BASE         = 'https://crudcrud.com/api/8c55961725c94977a4d3e3ed7725d836/cereri';
+    const LOGS_CERERI_BASE  = 'https://crudcrud.com/api/8c55961725c94977a4d3e3ed7725d836/logsCereri';
   </script>
-  
 </head>
 <body>
-  <!-- Verificare permisiuni admin -->
   <script>
     const cu = getUser();
     if (!cu || cu.role !== 'admin') location.replace('index.html');
-    // Refresh automat când primește update
     capyChan.onmessage = e => {
-      if (e.data.type === 'update-cereri') {
-        location.reload();
-      }
+      if (e.data.type === 'update-cereri') location.reload();
     };
   </script>
 
-  <!-- Navbar -->
   <header class="navbar">
     <a href="index.html" class="logo">CapyBank Admin</a>
     <ul class="nav-links">
@@ -35,7 +27,7 @@
       <li><a href="logs.html">Logs</a></li>
     </ul>
     <div class="nav-actions">
-      <span>Salut, <strong id="adminName"></strong></span>
+      Salut, <strong id="adminName"></strong>
       <button onclick="logout()" class="btn-secondary">Logout</button>
     </div>
     <div class="burger"
@@ -43,35 +35,29 @@
       <span></span><span></span><span></span>
     </div>
   </header>
-  <script>document.getElementById('adminName').textContent = cu.username;</script>
+  <script>
+    document.getElementById('adminName').textContent = cu.username;
+  </script>
 
-  <!-- Conținut principal -->
   <main class="admin-wrapper">
     <h1 class="admin-title">Gestionează cererile</h1>
-
-    <!-- Sumar cereri -->
     <div id="summary" class="section-bg" style="max-width:800px; margin-bottom:2rem;"></div>
-
-    <!-- Container pentru cardurile cererilor -->
     <div id="requests-container"></div>
   </main>
 
-  <!-- Footer -->
   <footer class="footer"><p>&copy; 2025 CapyBank</p></footer>
 
-  <!-- Script principal Admin -->
   <script>
     (async function() {
       try {
-        // Preluăm toate cererile de pe CrudCrud
-        const response = await fetch(CRUD_BASE);
-        if (!response.ok) throw new Error(`Fetch error: ${response.status}`);
-        const cereri = await response.json();
+        // 1) Preluăm cererile principale
+        const resp = await fetch(CRUD_BASE);
+        if (!resp.ok) throw new Error(`Fetch error: ${resp.status}`);
+        const cereri = await resp.json();
 
-        // Calculăm sumar
+        // 2) Sumar
         const counts = { Pending:0, Accepted:0, Refused:0 };
         cereri.forEach(c => counts[c.status]++);
-
         document.getElementById('summary').innerHTML = `
           <h3>Sumar cereri</h3>
           <p>Pending:  <strong>${counts.Pending}</strong></p>
@@ -79,13 +65,13 @@
           <p>Refused:  <strong>${counts.Refused}</strong></p>
         `;
 
+        // 3) Afișăm cardurile
         const container = document.getElementById('requests-container');
         if (!cereri.length) {
           container.innerHTML = '<p style="text-align:center;color:#666;">Nu sunt cereri.</p>';
         } else {
           cereri.forEach((c, idx) => {
-            const color = c.status === 'Accepted' ? '#2a9d8f'
-                        : c.status === 'Refused'  ? '#e63946' : '#555';
+            const clr = c.status==='Accepted'? '#2a9d8f' : c.status==='Refused'? '#e63946' : '#555';
             const card = document.createElement('div');
             card.className = 'form-card request';
             card.innerHTML = `
@@ -96,10 +82,10 @@
               <p><strong>Sumă:</strong> ${c.suma} RON</p>
               <p><strong>Perioadă:</strong> ${c.perioada}</p>
               <p><strong>Motiv:</strong> ${c.motiv}</p>
-              <p><strong>Status:</strong> <span style="color:${color}">${c.status}</span></p>
-              ${c.decisionDate ? `<p><strong>Decizie la:</strong> ${c.decisionDate}</p>` : ''}
+              <p><strong>Status:</strong> <span style="color:${clr};">${c.status}</span></p>
+              ${c.decisionDate? `<p><strong>Decizie la:</strong> ${c.decisionDate}</p>` : ''}
               <div class="actions">
-                ${c.status === 'Pending' ? `
+                ${c.status==='Pending'? `
                   <button class="submit-btn" data-act="accept" data-id="${c._id}">Acceptă</button>
                   <button class="submit-btn refuse" data-act="refuse" data-id="${c._id}">Refuză</button>
                 ` : ''}
@@ -110,36 +96,46 @@
           });
         }
 
-        // Handler general pentru accept, refuse, delete
-        container.addEventListener('click', async event => {
-          const btn = event.target.closest('button[data-act]');
+        // 4) Handler butoane
+        container.addEventListener('click', async e => {
+          const btn = e.target.closest('button[data-act]');
           if (!btn) return;
-          const act = btn.dataset.act;
-          const id  = btn.dataset.id;
-          const url = `${CRUD_BASE}/${id}`;
+          const act = btn.dataset.act, id = btn.dataset.id;
+          const urlMain = `${CRUD_BASE}/${id}`;
 
-          if (act === 'delete') {
+          if (act==='delete') {
             if (!confirm('Ștergi definitiv această cerere?')) return;
-            await fetch(url, { method:'DELETE' });
+            // șterg doar principalul
+            await fetch(urlMain, { method:'DELETE' });
           } else {
-            // Preluăm și actualizăm documentul
-            const docRes = await fetch(url);
-            const doc    = await docRes.json();
-            doc.status       = act === 'accept' ? 'Accepted' : 'Refused';
+            // accept/refuse → actualizez principalul
+            const doc = await (await fetch(urlMain)).json();
+            doc.status = act==='accept'? 'Accepted':'Refused';
             doc.decisionDate = new Date().toLocaleString();
-            // Eliminăm _id din payload
-            const { _id, ...payload } = doc;
-            await fetch(url, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
+            const {_id, ...payload} = doc;
+            await fetch(urlMain, {
+              method:'PUT',
+              headers:{ 'Content-Type':'application/json' },
               body: JSON.stringify(payload)
             });
+            // apoi actualizez și backup-ul
+            const logs = await (await fetch(LOGS_CERERI_BASE)).json();
+            const rec = logs.find(r => r.id === id);
+            if (rec) {
+              rec.status = doc.status;
+              rec.decisionDate = doc.decisionDate;
+              const { _id: logId, ...logPayload } = rec;
+              await fetch(`${LOGS_CERERI_BASE}/${logId}`, {
+                method:'PUT',
+                headers:{ 'Content-Type':'application/json' },
+                body: JSON.stringify(logPayload)
+              });
+            }
           }
 
-          // Reload imediat pentru admin
-          location.reload();
-          // Notificăm celelalte tab-uri
+          // 5) Broadcast + reload
           capyChan.postMessage({ type:'update-cereri' });
+          location.reload();
         });
 
       } catch (err) {
