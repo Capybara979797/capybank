@@ -1,2 +1,2 @@
 
-const CRUD_BASE = 'https://crudcrud.com/api/162ac6e4fbe24090b36ab003d01b0842/cereri';
+const CRUD_BASE = 'https://crudcrud.com/api/58fb9d259e7648bb92659b4a74e53337/cereri';
